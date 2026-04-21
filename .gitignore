@@ -1,0 +1,13 @@
+# NetCDF data files
+*.nc
+
+# Generated web assets (rebuilt by preprocess.py)
+data/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo

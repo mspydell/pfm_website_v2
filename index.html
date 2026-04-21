@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pathogen Forecasting Model — San Diego / Tijuana Coast</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --low:    #1a9e3f;
+      --med:    #e6a817;
+      --high:   #d32f2f;
+      --bg:     #f5f6fa;
+      --card:   #ffffff;
+      --text:   #1a1a2e;
+      --muted:  #6b7280;
+      --border: #e2e8f0;
+      --header-h: 60px;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────────── */
+    header {
+      height: var(--header-h);
+      background: #0d2137;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 1.2rem;
+      gap: 0.8rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    header h1 {
+      font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+      font-weight: 600;
+      line-height: 1.2;
+      flex: 1;
+    }
+    #update-time {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    /* ── Main layout ──────────────────────────────────────────────────────── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.8rem;
+      display: grid;
+      gap: 0.8rem;
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "cards"
+        "map"
+        "chart";
+    }
+    @media (min-width: 768px) {
+      main {
+        grid-template-columns: 1fr 380px;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+          "map  cards"
+          "map  chart"
+          "ctrl chart";
+      }
+    }
+
+    /* ── Card container ───────────────────────────────────────────────────── */
+    #cards {
+      grid-area: cards;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.6rem;
+    }
+    @media (min-width: 480px) and (max-width: 767px) {
+      #cards { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .site-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 0.7rem 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      transition: border-color 0.3s;
+    }
+    .site-card.risk-0 { border-color: var(--low); }
+    .site-card.risk-1 { border-color: var(--med); }
+    .site-card.risk-2 { border-color: var(--high); }
+
+    .card-name {
+      font-size: clamp(0.7rem, 2vw, 0.8rem);
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .risk-pill {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+      color: #fff;
+      width: fit-content;
+    }
+    .risk-pill.risk-0 { background: var(--low); }
+    .risk-pill.risk-1 { background: var(--med); color: #1a1a2e; }
+    .risk-pill.risk-2 { background: var(--high); }
+
+    .card-value {
+      font-size: 0.68rem;
+      color: var(--muted);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    /* ── Map ──────────────────────────────────────────────────────────────── */
+    #map-wrap {
+      grid-area: map;
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    #map {
+      width: 100%;
+      height: min(55vw, 480px);
+    }
+    @media (min-width: 768px) {
+      #map { height: 100%; min-height: 380px; }
+    }
+
+    /* ── Time controls ────────────────────────────────────────────────────── */
+    #ctrl {
+      grid-area: ctrl;
+      background: var(--card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    #map-wrap #ctrl-mobile {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(4px);
+      padding: 0.6rem 0.8rem;
+      z-index: 500;
+    }
+    @media (min-width: 768px) {
+      #map-wrap #ctrl-mobile { display: none; }
+      #ctrl { display: flex; }
+    }
+    @media (max-width: 767px) {
+      #ctrl { display: none; }
+    }
+
+    .ctrl-inner {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    #play-btn, #play-btn-m {
+      background: #0d2137;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #play-btn:active, #play-btn-m:active { opacity: 0.75; }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: #0d2137;
+      height: 4px;
+      cursor: pointer;
+      min-width: 0;
+    }
+    #time-label, #time-label-m {
+      font-size: 0.72rem;
+      color: var(--muted);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Chart ────────────────────────────────────────────────────────────── */
+    #chart-wrap {
+      grid-area: chart;
+      background: var(--card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 0.8rem;
+    }
+    #chart-wrap h2 {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.5rem;
+    }
+    #ts-chart { width: 100% !important; max-height: 200px; }
+
+    /* ── Legend ───────────────────────────────────────────────────────────── */
+    .legend {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      font-size: 0.68rem;
+      color: var(--muted);
+      align-items: center;
+    }
+    .legend-item { display: flex; align-items: center; gap: 0.3rem; }
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Loading overlay ──────────────────────────────────────────────────── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: #0d2137;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      z-index: 9999;
+      transition: opacity 0.4s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    #loading p { font-size: 0.9rem; color: #94a3b8; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Loading forecast data…</p>
+</div>
+
+<header>
+  <h1>Pathogen Forecasting Model<br><span style="font-weight:400;font-size:0.85em">San Diego / Tijuana Coast</span></h1>
+  <span id="update-time"></span>
+</header>
+
+<main>
+  <!-- Site risk cards -->
+  <div id="cards">
+    <!-- populated by JS -->
+  </div>
+
+  <!-- Map -->
+  <div id="map-wrap">
+    <div id="map"></div>
+    <!-- Mobile time controls (overlaid on map) -->
+    <div id="ctrl-mobile">
+      <div class="ctrl-inner">
+        <button id="play-btn-m" aria-label="Play/Pause">▶</button>
+        <input id="scrubber-m" type="range" min="0" value="0">
+        <span id="time-label-m">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop time controls -->
+  <div id="ctrl">
+    <div class="ctrl-inner">
+      <button id="play-btn" aria-label="Play/Pause">▶</button>
+      <input id="scrubber" type="range" min="0" value="0">
+      <span id="time-label">—</span>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--low)"></div>Low risk</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--med)"></div>Medium risk</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--high)"></div>High risk</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div id="chart-wrap">
+    <h2>Sewage concentration at monitoring sites</h2>
+    <canvas id="ts-chart"></canvas>
+    <div class="legend" style="margin-top:0.5rem" id="chart-legend"></div>
+  </div>
+</main>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const RISK_LABELS = ['Low', 'Medium', 'High'];
+const RISK_COLORS = ['#1a9e3f', '#e6a817', '#d32f2f'];
+const SITE_COLORS = ['#2196f3', '#9c27b0', '#ff9800', '#00bcd4'];
+const FRAME_BASE  = 'data/map/frame_';
+
+let timesData, sitesData, shoreData;
+let map, imgOverlay, shoreLayer;
+let currentFrame = 0;
+let playing = false;
+let playInterval = null;
+let chart;
+let frameCache = {};
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function fmtTime(iso) {
+  const d = new Date(iso + 'Z');
+  return d.toLocaleString('en-US', {
+    month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+    hour12: true, timeZoneName: 'short',
+    timeZone: 'America/Los_Angeles'
+  });
+}
+
+function frameUrl(i) {
+  return `${FRAME_BASE}${String(i).padStart(3,'0')}.png`;
+}
+
+// ── Data loading ─────────────────────────────────────────────────────────────
+async function loadAll() {
+  const [td, sd, shr] = await Promise.all([
+    fetch('data/times.json').then(r => r.json()),
+    fetch('data/sites.json').then(r => r.json()),
+    fetch('data/shoreline.json').then(r => r.json()),
+  ]);
+  return [td, sd, shr];
+}
+
+// ── Preload adjacent frames ───────────────────────────────────────────────────
+function preloadFrame(i) {
+  if (i < 0 || i >= timesData.times.length || frameCache[i]) return;
+  const img = new Image();
+  img.src = frameUrl(i);
+  frameCache[i] = img;
+}
+
+// ── Map setup ────────────────────────────────────────────────────────────────
+function initMap(bounds) {
+  map = L.map('map', {
+    zoomControl: true,
+    attributionControl: true,
+  });
+
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri',
+    maxZoom: 17,
+  }).addTo(map);
+
+  const lBounds = [[bounds.south, bounds.west], [bounds.north, bounds.east]];
+  imgOverlay = L.imageOverlay(frameUrl(0), lBounds, { opacity: 0.75, interactive: false }).addTo(map);
+  map.fitBounds(lBounds, { padding: [10, 10] });
+
+  addColorbar();
+  preloadFrame(1);
+}
+
+// ── Colorbar Leaflet control ──────────────────────────────────────────────────
+// Color ramp matches preprocess.py COLOR_RAMP exactly (log10 → RGBA stops).
+// Labels are in % (dye_fraction × 100) and rendered as opaque pills so they
+// are readable regardless of the underlying map tile or gradient colour.
+function addColorbar() {
+  const L10_MIN = -8, L10_MAX = 0;
+  const BAR_H   = 150;  // px
+
+  // Must mirror preprocess.py COLOR_RAMP
+  const ramp = [
+    { l: -8.0, r: 255, g: 220, b:   0, a:   0 },
+    { l: -6.0, r: 255, g: 220, b:   0, a:  20 },
+    { l: -5.0, r: 255, g: 210, b:   0, a: 110 },
+    { l: -4.0, r: 255, g: 160, b:   0, a: 185 },
+    { l: -3.0, r: 255, g:  80, b:   0, a: 225 },
+    { l: -1.3, r:  70, g:   0, b: 110, a: 240 },
+    { l:  0.0, r:  40, g:   0, b:  70, a: 255 },
+  ];
+
+  // Helpers
+  const frac  = l => (l - L10_MIN) / (L10_MAX - L10_MIN);       // 0=bottom, 1=top
+  const topPx = l => ((1 - frac(l)) * BAR_H).toFixed(1) + 'px'; // px from top of bar
+  const rgba  = s => `rgba(${s.r},${s.g},${s.b},${(s.a / 255).toFixed(3)})`;
+  const gradStop = s => `${rgba(s)} ${(frac(s.l) * 100).toFixed(1)}%`;
+
+  const grad = `linear-gradient(to top, ${ramp.map(gradStop).join(', ')})`;
+
+  // Labelled ticks — log10 values, labels in %
+  const ticks = [
+    { l: -5,   label: '0.001%' },
+    { l: -3,   label: '0.1%'   },
+    { l: -1,   label: '10%'    },
+  ];
+
+  // Pill style — right-justified so labels flush against the bar
+  const pill = `
+    position:absolute; right:0; transform:translateY(-50%);
+    background:rgba(255,255,255,0.92); border:1px solid rgba(0,0,0,0.18);
+    border-radius:3px; padding:1px 4px;
+    font-size:10px; font-weight:700; color:#1a1a2e;
+    white-space:nowrap; line-height:1.4;
+    box-shadow:0 1px 3px rgba(0,0,0,0.15);
+  `;
+
+  const html = `
+    <div style="
+      display:flex; align-items:flex-end; gap:0;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      user-select:none;
+    ">
+      <!-- label column to the LEFT of the bar -->
+      <div style="position:relative; width:52px; height:${BAR_H}px; flex-shrink:0;">
+        ${ticks.map(t => `
+          <div style="${pill} top:${topPx(t.l)};">${t.label}</div>
+        `).join('')}
+        <div style="${pill} top:${BAR_H}px;">≈ 0%</div>
+      </div>
+
+      <!-- gradient bar with ticks extending LEFT into label column -->
+      <div style="position:relative; width:14px; height:${BAR_H}px; flex-shrink:0;">
+        <div style="
+          position:absolute; inset:0;
+          background:${grad};
+          border:1px solid rgba(0,0,0,0.25);
+          border-radius:3px;
+        "></div>
+        ${ticks.map(t => `
+          <div style="
+            position:absolute; top:${topPx(t.l)};
+            right:14px; width:5px; height:1px;
+            background:rgba(0,0,0,0.6); transform:translateY(-50%);
+          "></div>
+        `).join('')}
+        <div style="
+          position:absolute; top:${BAR_H}px;
+          right:14px; width:5px; height:1px;
+          background:rgba(0,0,0,0.6);
+        "></div>
+      </div>
+
+      <!-- rotated axis title to the right of the bar -->
+      <div style="
+        font-size:9px; font-weight:600; color:#fff;
+        writing-mode:vertical-rl;
+        text-transform:uppercase; letter-spacing:0.06em;
+        text-shadow:0 1px 3px rgba(0,0,0,0.7);
+        align-self:center; margin-left:4px;
+      ">Sewage conc.</div>
+    </div>
+  `;
+
+  const ColorbarControl = L.Control.extend({
+    options: { position: 'bottomleft' },
+    onAdd() {
+      const div = L.DomUtil.create('div');
+      div.innerHTML = html;
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    }
+  });
+  new ColorbarControl().addTo(map);
+}
+
+// ── Shoreline layer ───────────────────────────────────────────────────────────
+function buildShoreLayer(frameIdx) {
+  if (shoreLayer) shoreLayer.remove();
+
+  const lats = shoreData.lats;
+  const lons = shoreData.lons;
+  const risks = shoreData.risk[frameIdx];
+  const n = lats.length;
+
+  const circles = [];
+  for (let i = 0; i < n; i++) {
+    const r = risks[i];
+    circles.push(
+      L.circleMarker([lats[i], lons[i]], {
+        radius: 3,
+        color: RISK_COLORS[r] ?? '#888',
+        fillColor: RISK_COLORS[r] ?? '#888',
+        fillOpacity: 0.9,
+        weight: 0,
+      })
+    );
+  }
+  shoreLayer = L.layerGroup(circles).addTo(map);
+}
+
+// ── Site markers ──────────────────────────────────────────────────────────────
+function buildSiteMarkers() {
+  const names = sitesData.names;
+  for (let i = 0; i < names.length; i++) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:#0d2137;color:#fff;font-size:10px;font-weight:700;
+        padding:2px 5px;border-radius:4px;white-space:nowrap;
+        box-shadow:0 1px 4px rgba(0,0,0,0.4);
+      ">${names[i]}</div>`,
+      iconAnchor: [0, 0],
+    });
+    L.marker([sitesData.lats[i], sitesData.lons[i]], { icon })
+      .bindPopup(`<strong>${names[i]}</strong>`)
+      .addTo(map);
+  }
+}
+
+// ── Site cards ────────────────────────────────────────────────────────────────
+function buildCards() {
+  const el = document.getElementById('cards');
+  el.innerHTML = sitesData.names.map((name, i) => `
+    <div class="site-card" id="card-${i}">
+      <div class="card-name">${name}</div>
+      <div class="risk-pill" id="pill-${i}">—</div>
+      <div class="card-value" id="cv-${i}">—</div>
+    </div>
+  `).join('');
+}
+
+function updateCards(frameIdx) {
+  const n = sitesData.names.length;
+  for (let i = 0; i < n; i++) {
+    const r = sitesData.risk[frameIdx][i];
+    const dye = sitesData.dye[frameIdx][i];
+    const card = document.getElementById(`card-${i}`);
+    const pill = document.getElementById(`pill-${i}`);
+    const cv   = document.getElementById(`cv-${i}`);
+    card.className = `site-card risk-${r}`;
+    pill.className = `risk-pill risk-${r}`;
+    pill.textContent = RISK_LABELS[r];
+    cv.textContent = `${(dye * 100).toExponential(2)}%`;
+  }
+}
+
+// ── Chart setup ──────────────────────────────────────────────────────────────
+function initChart() {
+  const n = timesData.times.length;
+  const labels = timesData.times.map(t => {
+    const d = new Date(t + 'Z');
+    return d.toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: 'numeric', hour12: true,
+      timeZone: 'America/Los_Angeles'
+    });
+  });
+
+  const datasets = sitesData.names.map((name, i) => ({
+    label: name,
+    data: sitesData.l10.map(row => row[i]),
+    borderColor: SITE_COLORS[i],
+    backgroundColor: SITE_COLORS[i] + '22',
+    borderWidth: 1.5,
+    pointRadius: 0,
+    tension: 0.3,
+    fill: false,
+  }));
+
+  // Threshold lines
+  const thresholds = timesData.thresholds;
+
+  chart = new Chart(document.getElementById('ts-chart'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        annotation: {},
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} (log₁₀)`,
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#6b7280' },
+          grid: { color: '#f0f0f0' },
+        },
+        y: {
+          title: { display: true, text: 'log₁₀(dye)', font: { size: 10 }, color: '#6b7280' },
+          ticks: { font: { size: 10 }, color: '#6b7280' },
+          grid: { color: '#f0f0f0' },
+        }
+      }
+    },
+    plugins: [{
+      id: 'threshLines',
+      afterDraw(ch) {
+        const { ctx, scales: { x, y } } = ch;
+        thresholds.forEach((t, ti) => {
+          const yPx = y.getPixelForValue(t);
+          ctx.save();
+          ctx.strokeStyle = ti === 0 ? '#1a9e3f' : '#d32f2f';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x.left, yPx);
+          ctx.lineTo(x.right, yPx);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+    }, {
+      id: 'timeBar',
+      afterDraw(ch) {
+        const { ctx, scales: { x, y } } = ch;
+        if (currentFrame < 0 || currentFrame >= x.ticks.length) return;
+        const meta = ch.getDatasetMeta(0);
+        if (!meta.data[currentFrame]) return;
+        const xPx = meta.data[currentFrame].x;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(13,33,55,0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(xPx, y.top);
+        ctx.lineTo(xPx, y.bottom);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }]
+  });
+
+  // Legend
+  const lgEl = document.getElementById('chart-legend');
+  lgEl.innerHTML = sitesData.names.map((name, i) =>
+    `<div class="legend-item">
+      <div class="legend-dot" style="background:${SITE_COLORS[i]}"></div>
+      ${name}
+    </div>`
+  ).join('');
+}
+
+// ── Frame update ──────────────────────────────────────────────────────────────
+function goToFrame(i) {
+  currentFrame = i;
+  const url = frameUrl(i);
+  imgOverlay.setUrl(url);
+  buildShoreLayer(i);
+  updateCards(i);
+
+  // Update time labels
+  const label = fmtTime(timesData.times[i]);
+  document.getElementById('time-label').textContent = label;
+  document.getElementById('time-label-m').textContent = label;
+
+  // Sync scrubbers
+  document.getElementById('scrubber').value = i;
+  document.getElementById('scrubber-m').value = i;
+
+  // Update chart cursor
+  if (chart) chart.update('none');
+
+  // Preload neighbors
+  preloadFrame(i + 1);
+  preloadFrame(i + 2);
+  preloadFrame(i - 1);
+}
+
+// ── Playback ──────────────────────────────────────────────────────────────────
+function togglePlay() {
+  playing = !playing;
+  const icons = ['▶', '⏸'];
+  document.getElementById('play-btn').textContent   = playing ? icons[1] : icons[0];
+  document.getElementById('play-btn-m').textContent = playing ? icons[1] : icons[0];
+
+  if (playing) {
+    const n = timesData.times.length;
+    playInterval = setInterval(() => {
+      let next = currentFrame + 1;
+      if (next >= n) { next = 0; }
+      goToFrame(next);
+    }, 150);
+  } else {
+    clearInterval(playInterval);
+  }
+}
+
+// ── Scrubber wiring ───────────────────────────────────────────────────────────
+function wireScrubbers(maxVal) {
+  ['scrubber', 'scrubber-m'].forEach(id => {
+    const el = document.getElementById(id);
+    el.max = maxVal;
+    el.addEventListener('input', e => {
+      if (playing) togglePlay();
+      goToFrame(parseInt(e.target.value));
+    });
+  });
+  document.getElementById('play-btn').addEventListener('click', togglePlay);
+  document.getElementById('play-btn-m').addEventListener('click', togglePlay);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function boot() {
+  [timesData, sitesData, shoreData] = await loadAll();
+  const n = timesData.times.length;
+
+  document.getElementById('update-time').textContent =
+    'Updated ' + fmtTime(timesData.times[0]);
+
+  initMap(timesData.bounds);
+  buildCards();
+  buildSiteMarkers();
+  initChart();
+  wireScrubbers(n - 1);
+  goToFrame(0);
+
+  // Hide loading screen
+  const loading = document.getElementById('loading');
+  loading.classList.add('hidden');
+  setTimeout(() => loading.remove(), 500);
+
+  // Background preload first 10 frames
+  for (let i = 1; i <= Math.min(10, n - 1); i++) preloadFrame(i);
+}
+
+boot().catch(err => {
+  document.querySelector('#loading p').textContent = 'Error loading data: ' + err.message;
+  console.error(err);
+});
+</script>
+</body>
+</html>
