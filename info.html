@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — Pathogen Forecasting Model</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --low:    #1a9e3f;
+      --med:    #e6a817;
+      --high:   #d32f2f;
+      --bg:     #f5f6fa;
+      --card:   #ffffff;
+      --text:   #1a1a2e;
+      --muted:  #6b7280;
+      --border: #e2e8f0;
+      --header-h: 60px;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100dvh;
+    }
+    header {
+      height: var(--header-h);
+      background: #0d2137;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 1.2rem;
+      gap: 0.6rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    header h1 {
+      font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+      font-weight: 600;
+      line-height: 1.2;
+      flex: 1;
+    }
+    .back-link {
+      font-size: 0.75rem;
+      color: #cbd5e1;
+      text-decoration: none;
+      padding: 0.25rem 0.6rem;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+    .back-link:hover, .back-link:focus {
+      background: #1e3a5f;
+      color: #fff;
+    }
+    .lang-toggle {
+      display: flex;
+      gap: 0.25rem;
+    }
+    .lang-btn {
+      background: transparent;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .lang-btn:hover { color: #fff; }
+    .lang-btn.active {
+      background: #1e3a5f;
+      color: #fff;
+      border-color: #1e3a5f;
+    }
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 1.4rem 1.2rem 3rem;
+    }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.1rem 1.2rem;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.6rem;
+    }
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+    }
+    p { margin-bottom: 0.7rem; font-size: 0.95rem; }
+    p:last-child { margin-bottom: 0; }
+    ul { margin: 0.4rem 0 0.7rem 1.2rem; font-size: 0.95rem; }
+    li { margin-bottom: 0.3rem; }
+    a { color: #1e3a5f; }
+    a:hover { color: #0d2137; }
+
+    .risk-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.5rem;
+    }
+    .risk-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      border-left: 6px solid;
+      background: #fafbfc;
+    }
+    .risk-row.low  { border-left-color: var(--low); }
+    .risk-row.med  { border-left-color: var(--med); }
+    .risk-row.high { border-left-color: var(--high); }
+    .risk-label {
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      min-width: 5.5rem;
+    }
+    .risk-row.low  .risk-label { color: var(--low); }
+    .risk-row.med  .risk-label { color: #9c6f00; }
+    .risk-row.high .risk-label { color: var(--high); }
+    .risk-text { font-size: 0.9rem; color: var(--text); }
+
+    .disclaimer {
+      background: #fff8e1;
+      border-color: #f0d37d;
+    }
+    .disclaimer p {
+      font-size: 0.88rem;
+      color: #5a4408;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1 data-en="About the Pathogen Forecasting Model"
+      data-es="Acerca del Modelo de Pronóstico de Patógenos"></h1>
+  <div class="lang-toggle" role="group" aria-label="Language">
+    <button class="lang-btn" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="es">ES</button>
+  </div>
+  <a class="back-link" href="index.html"
+     data-en="← Forecast" data-es="← Pronóstico"></a>
+</header>
+
+<main>
+
+  <section>
+    <h2 data-en="Project" data-es="Proyecto"></h2>
+    <h3 data-en="Pathogen Forecast Modeling: San Diego, CA"
+        data-es="Modelado de Pronóstico de Patógenos: San Diego, CA"></h3>
+    <p data-en="An experimental forecast model that predicts sewage concentrations in ocean waters for the San Diego / Tijuana border region. Colored contour lines on the map represent the percentage of sewage at the ocean surface, with values ranging from 100% (pure sewage) down to near-zero percentages."
+       data-es="Un modelo experimental de pronóstico que predice las concentraciones de aguas residuales en las aguas oceánicas de la región fronteriza de San Diego / Tijuana. Las líneas de contorno de colores en el mapa representan el porcentaje de aguas residuales en la superficie del océano, con valores que van desde el 100% (aguas residuales puras) hasta porcentajes casi nulos."></p>
+  </section>
+
+  <section>
+    <h2 data-en="Goal" data-es="Objetivo"></h2>
+    <p data-en="Provide forecasts of sewage dispersal at the ocean surface to inform swimmer illness risk assessments at four designated coastal locations."
+       data-es="Proporcionar pronósticos de la dispersión de aguas residuales en la superficie del océano para informar las evaluaciones de riesgo de enfermedad para nadadores en cuatro ubicaciones costeras designadas."></p>
+  </section>
+
+  <section>
+    <h2 data-en="Methodology" data-es="Metodología"></h2>
+    <p data-en="The model uses NOAA forecasts of Tijuana River flow and estimates San Antonio de los Buenos outflow at Punta Bandera, Mexico. Swimmer illness risk is correlated to norovirus infection probability based on sewage concentration levels."
+       data-es="El modelo utiliza pronósticos de la NOAA del caudal del Río Tijuana y estima la descarga de San Antonio de los Buenos en Punta Bandera, México. El riesgo de enfermedad para nadadores se correlaciona con la probabilidad de infección por norovirus según los niveles de concentración de aguas residuales."></p>
+  </section>
+
+  <section>
+    <h2 data-en="Swimmer Risk Classification"
+        data-es="Clasificación de Riesgo para Nadadores"></h2>
+    <ul class="risk-list">
+      <li class="risk-row high">
+        <span class="risk-label" data-en="High" data-es="Alto"></span>
+        <span class="risk-text"
+              data-en="Greater than 0.1% sewage"
+              data-es="Más del 0.1% de aguas residuales"></span>
+      </li>
+      <li class="risk-row med">
+        <span class="risk-label" data-en="Moderate" data-es="Moderado"></span>
+        <span class="risk-text"
+              data-en="0.001% to 0.1% sewage"
+              data-es="De 0.001% a 0.1% de aguas residuales"></span>
+      </li>
+      <li class="risk-row low">
+        <span class="risk-label" data-en="Low" data-es="Bajo"></span>
+        <span class="risk-text"
+              data-en="Less than 0.001% sewage"
+              data-es="Menos del 0.001% de aguas residuales"></span>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 data-en="Monitoring Locations"
+        data-es="Ubicaciones de Monitoreo"></h2>
+    <ul>
+      <li data-en="Playas de Tijuana" data-es="Playas de Tijuana"></li>
+      <li data-en="Imperial Beach Pier"
+          data-es="Muelle de Imperial Beach"></li>
+      <li data-en="Silver Strand" data-es="Silver Strand"></li>
+      <li data-en="Coronado (Avenida Lunar)"
+          data-es="Coronado (Avenida Lunar)"></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 data-en="Funding" data-es="Financiamiento"></h2>
+    <p data-en="Funding provided by the State of California."
+       data-es="Financiamiento proporcionado por el Estado de California."></p>
+  </section>
+
+  <section>
+    <h2 data-en="Contact" data-es="Contacto"></h2>
+    <p><a href="mailto:ffeddersen@ucsd.edu">ffeddersen@ucsd.edu</a></p>
+  </section>
+
+  <section>
+    <h2 data-en="References &amp; Related Resources"
+        data-es="Referencias y Recursos Relacionados"></h2>
+    <ul>
+      <li>
+        <span data-en="Feddersen et al. (2021) — norovirus risk assessment methodology."
+              data-es="Feddersen et al. (2021) — metodología de evaluación de riesgo de norovirus."></span>
+      </li>
+      <li>
+        <span data-en="County of San Diego Beach Water Quality:"
+              data-es="Calidad del agua en las playas del Condado de San Diego:"></span>
+        <a href="https://sdbeachinfo.com" target="_blank" rel="noopener">sdbeachinfo.com</a>
+      </li>
+      <li>
+        <span data-en="Tijuana River Valley Sewage Crisis Environmental Dashboard:"
+              data-es="Tablero Ambiental de la Crisis de Aguas Residuales del Valle del Río Tijuana:"></span>
+        <a href="https://tjdashboard.netlify.app" target="_blank" rel="noopener">tjdashboard.netlify.app</a>
+      </li>
+      <li>
+        <span data-en="Video guide:" data-es="Guía en video:"></span>
+        <a href="https://youtu.be/m8Nto5vhmKc" target="_blank" rel="noopener">youtu.be/m8Nto5vhmKc</a>
+      </li>
+    </ul>
+  </section>
+
+  <section class="disclaimer">
+    <h2 data-en="Disclaimer" data-es="Aviso"></h2>
+    <p data-en="This forecast is experimental and may contain errors. Not for official use. Accuracy is not guaranteed."
+       data-es="Este pronóstico es experimental y puede contener errores. No es para uso oficial. No se garantiza la precisión."></p>
+  </section>
+
+</main>
+
+<script>
+  const TITLE = {
+    en: 'About — Pathogen Forecasting Model',
+    es: 'Acerca — Modelo de Pronóstico de Patógenos',
+  };
+
+  function setLang(lang) {
+    if (lang !== 'en' && lang !== 'es') lang = 'en';
+    document.documentElement.lang = lang;
+    document.title = TITLE[lang];
+    document.querySelectorAll('[data-en]').forEach(el => {
+      const text = el.dataset[lang];
+      if (text !== undefined) el.textContent = text;
+    });
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+    try { localStorage.setItem('pfm-lang', lang); } catch (e) {}
+  }
+
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => setLang(btn.dataset.lang));
+  });
+
+  let saved = 'en';
+  try { saved = localStorage.getItem('pfm-lang') || 'en'; } catch (e) {}
+  setLang(saved);
+</script>
+
+</body>
+</html>

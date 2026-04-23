@@ -56,6 +56,20 @@
       color: #94a3b8;
       white-space: nowrap;
     }
+    #info-link {
+      font-size: 0.75rem;
+      color: #cbd5e1;
+      text-decoration: none;
+      padding: 0.25rem 0.6rem;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+    #info-link:hover, #info-link:focus {
+      background: #1e3a5f;
+      color: #fff;
+    }
 
     /* ── Main layout ──────────────────────────────────────────────────────── */
     main {
@@ -66,8 +80,8 @@
       gap: 0.8rem;
       grid-template-columns: 1fr;
       grid-template-areas:
-        "cards"
         "map"
+        "cards"
         "chart";
     }
     @media (min-width: 768px) {
@@ -84,13 +98,33 @@
     /* ── Card container ───────────────────────────────────────────────────── */
     #cards {
       grid-area: cards;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    #site-tabs {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.6rem;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.35rem;
     }
-    @media (min-width: 480px) and (max-width: 767px) {
-      #cards { grid-template-columns: repeat(4, 1fr); }
+    .site-tab {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 0.4rem 0.3rem;
+      font-size: clamp(0.6rem, 1.6vw, 0.72rem);
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.2;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
     }
+    .site-tab.active { color: #fff; }
 
     .site-card {
       background: var(--card);
@@ -169,7 +203,7 @@
       background: rgba(255,255,255,0.92);
       backdrop-filter: blur(4px);
       padding: 0.6rem 0.8rem;
-      z-index: 500;
+      z-index: 1000;
     }
     @media (min-width: 768px) {
       #map-wrap #ctrl-mobile { display: none; }
@@ -249,6 +283,20 @@
       flex-shrink: 0;
     }
 
+    /* ── Map site labels ──────────────────────────────────────────────────── */
+    .leaflet-tooltip.site-label {
+      background: rgba(13, 33, 55, 0.85);
+      color: #fff;
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+    .leaflet-tooltip.site-label::before { display: none; }
+
     /* ── Loading overlay ──────────────────────────────────────────────────── */
     #loading {
       position: fixed;
@@ -284,6 +332,7 @@
 
 <header>
   <h1>Pathogen Forecasting Model<br><span style="font-weight:400;font-size:0.85em">San Diego / Tijuana Coast</span></h1>
+  <a id="info-link" href="info.html">About</a>
   <span id="update-time"></span>
 </header>
 
@@ -322,9 +371,8 @@
 
   <!-- Chart -->
   <div id="chart-wrap">
-    <h2>Sewage concentration at monitoring sites</h2>
+    <h2 id="chart-title">Sewage concentration</h2>
     <canvas id="ts-chart"></canvas>
-    <div class="legend" style="margin-top:0.5rem" id="chart-legend"></div>
   </div>
 </main>
 
@@ -338,6 +386,7 @@ const FRAME_BASE  = 'data/map/frame_';
 let timesData, sitesData, shoreData;
 let map, imgOverlay, shoreLayer;
 let currentFrame = 0;
+let currentSite = 0;
 let playing = false;
 let playInterval = null;
 let chart;
@@ -392,8 +441,24 @@ function initMap(bounds) {
   imgOverlay = L.imageOverlay(frameUrl(0), lBounds, { opacity: 0.75, interactive: false }).addTo(map);
   map.fitBounds(lBounds, { padding: [10, 10] });
 
+  // Model domain outline (thin white angled box)
+  if (timesData.domain) {
+    L.polygon(timesData.domain, {
+      color: '#ffffff',
+      weight: 1,
+      opacity: 0.85,
+      fill: false,
+      interactive: false,
+    }).addTo(map);
+  }
+
   addColorbar();
   preloadFrame(1);
+
+  // Stop touch/click events on the overlay controls from reaching the map
+  const ctrlMobile = document.getElementById('ctrl-mobile');
+  L.DomEvent.disableClickPropagation(ctrlMobile);
+  L.DomEvent.disableScrollPropagation(ctrlMobile);
 }
 
 // ── Colorbar Leaflet control ──────────────────────────────────────────────────
@@ -528,46 +593,82 @@ function buildShoreLayer(frameIdx) {
 function buildSiteMarkers() {
   const names = sitesData.names;
   for (let i = 0; i < names.length; i++) {
-    const icon = L.divIcon({
-      className: '',
-      html: `<div style="
-        background:#0d2137;color:#fff;font-size:10px;font-weight:700;
-        padding:2px 5px;border-radius:4px;white-space:nowrap;
-        box-shadow:0 1px 4px rgba(0,0,0,0.4);
-      ">${names[i]}</div>`,
-      iconAnchor: [0, 0],
-    });
-    L.marker([sitesData.lats[i], sitesData.lons[i]], { icon })
+    L.circleMarker([sitesData.lats[i], sitesData.lons[i]], {
+      radius: 6,
+      color: '#fff',
+      weight: 2,
+      fillColor: SITE_COLORS[i],
+      fillOpacity: 1,
+    })
+      .bindTooltip(names[i], {
+        permanent: true,
+        direction: 'right',
+        offset: [6, 0],
+        className: 'site-label',
+      })
       .bindPopup(`<strong>${names[i]}</strong>`)
       .addTo(map);
   }
 }
 
-// ── Site cards ────────────────────────────────────────────────────────────────
+// ── Site tabs + detail ────────────────────────────────────────────────────────
 function buildCards() {
   const el = document.getElementById('cards');
-  el.innerHTML = sitesData.names.map((name, i) => `
-    <div class="site-card" id="card-${i}">
-      <div class="card-name">${name}</div>
-      <div class="risk-pill" id="pill-${i}">—</div>
-      <div class="card-value" id="cv-${i}">—</div>
-    </div>
+  const tabs = sitesData.names.map((name, i) => `
+    <button class="site-tab" id="tab-${i}" data-site="${i}"
+            style="border-color:${SITE_COLORS[i]}">${name}</button>
   `).join('');
+  el.innerHTML = `
+    <div id="site-tabs">${tabs}</div>
+    <div class="site-card" id="site-detail">
+      <div class="card-name" id="detail-name">—</div>
+      <div class="risk-pill" id="detail-pill">—</div>
+      <div class="card-value" id="detail-value">—</div>
+    </div>
+  `;
+  el.querySelectorAll('.site-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setCurrentSite(parseInt(btn.dataset.site));
+    });
+  });
 }
 
-function updateCards(frameIdx) {
-  const n = sitesData.names.length;
-  for (let i = 0; i < n; i++) {
-    const r = sitesData.risk[frameIdx][i];
-    const dye = sitesData.dye[frameIdx][i];
-    const card = document.getElementById(`card-${i}`);
-    const pill = document.getElementById(`pill-${i}`);
-    const cv   = document.getElementById(`cv-${i}`);
-    card.className = `site-card risk-${r}`;
-    pill.className = `risk-pill risk-${r}`;
-    pill.textContent = RISK_LABELS[r];
-    cv.textContent = `${(dye * 100).toExponential(2)}%`;
+function setCurrentSite(i) {
+  currentSite = i;
+  // Update tab active styling
+  sitesData.names.forEach((_, j) => {
+    const tab = document.getElementById(`tab-${j}`);
+    const active = j === i;
+    tab.classList.toggle('active', active);
+    tab.style.background = active ? SITE_COLORS[j] : '';
+  });
+  // Update chart: show only this site's dataset
+  if (chart) {
+    sitesData.names.forEach((_, j) => {
+      chart.setDatasetVisibility(j, j === i);
+    });
+    chart.update('none');
   }
+  // Update chart title
+  const title = document.getElementById('chart-title');
+  if (title) title.textContent = `Sewage concentration — ${sitesData.names[i]}`;
+  // Refresh detail panel for current frame
+  updateSiteDetail(currentFrame);
+}
+
+function updateSiteDetail(frameIdx) {
+  const i = currentSite;
+  const r = sitesData.risk[frameIdx][i];
+  const dye = sitesData.dye[frameIdx][i];
+  const card = document.getElementById('site-detail');
+  const name = document.getElementById('detail-name');
+  const pill = document.getElementById('detail-pill');
+  const cv   = document.getElementById('detail-value');
+  card.className = `site-card risk-${r}`;
+  name.textContent = sitesData.names[i];
+  pill.className = `risk-pill risk-${r}`;
+  pill.textContent = RISK_LABELS[r];
+  cv.textContent = `${(dye * 100).toExponential(2)}%`;
 }
 
 // ── Chart setup ──────────────────────────────────────────────────────────────
@@ -605,11 +706,7 @@ function initChart() {
       plugins: {
         legend: { display: false },
         annotation: {},
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} (log₁₀)`,
-          }
-        }
+        tooltip: { enabled: false }
       },
       scales: {
         x: {
@@ -617,13 +714,45 @@ function initChart() {
           grid: { color: '#f0f0f0' },
         },
         y: {
-          title: { display: true, text: 'log₁₀(dye)', font: { size: 10 }, color: '#6b7280' },
-          ticks: { font: { size: 10 }, color: '#6b7280' },
+          min: -7,
+          max: -1,
+          title: { display: true, text: '%', font: { size: 10 }, color: '#6b7280' },
+          ticks: {
+            font: { size: 10 },
+            color: '#6b7280',
+            stepSize: 1,
+            callback: v => {
+              const pct = Math.pow(10, v + 2);
+              if (pct >= 1) return pct.toFixed(0) + '%';
+              const decimals = Math.max(0, -Math.floor(Math.log10(pct)));
+              return pct.toFixed(decimals) + '%';
+            }
+          },
           grid: { color: '#f0f0f0' },
         }
       }
     },
     plugins: [{
+      id: 'riskBands',
+      beforeDatasetsDraw(ch) {
+        if (!thresholds || thresholds.length < 2) return;
+        const { ctx, chartArea, scales: { y } } = ch;
+        const [tLow, tHigh] = thresholds;
+        const clamp = v => Math.max(chartArea.top, Math.min(chartArea.bottom, v));
+        const yLow  = clamp(y.getPixelForValue(tLow));
+        const yHigh = clamp(y.getPixelForValue(tHigh));
+        const x = chartArea.left;
+        const w = chartArea.right - chartArea.left;
+        ctx.save();
+        ctx.fillStyle = 'rgba(211,47,47,0.14)';
+        ctx.fillRect(x, chartArea.top, w, yHigh - chartArea.top);
+        ctx.fillStyle = 'rgba(230,168,23,0.18)';
+        ctx.fillRect(x, yHigh, w, yLow - yHigh);
+        ctx.fillStyle = 'rgba(26,158,63,0.14)';
+        ctx.fillRect(x, yLow, w, chartArea.bottom - yLow);
+        ctx.restore();
+      }
+    }, {
       id: 'threshLines',
       afterDraw(ch) {
         const { ctx, scales: { x, y } } = ch;
@@ -643,10 +772,9 @@ function initChart() {
     }, {
       id: 'timeBar',
       afterDraw(ch) {
-        const { ctx, scales: { x, y } } = ch;
-        if (currentFrame < 0 || currentFrame >= x.ticks.length) return;
+        const { ctx, scales: { y } } = ch;
         const meta = ch.getDatasetMeta(0);
-        if (!meta.data[currentFrame]) return;
+        if (currentFrame < 0 || !meta.data[currentFrame]) return;
         const xPx = meta.data[currentFrame].x;
         ctx.save();
         ctx.strokeStyle = 'rgba(13,33,55,0.6)';
@@ -660,14 +788,6 @@ function initChart() {
     }]
   });
 
-  // Legend
-  const lgEl = document.getElementById('chart-legend');
-  lgEl.innerHTML = sitesData.names.map((name, i) =>
-    `<div class="legend-item">
-      <div class="legend-dot" style="background:${SITE_COLORS[i]}"></div>
-      ${name}
-    </div>`
-  ).join('');
 }
 
 // ── Frame update ──────────────────────────────────────────────────────────────
@@ -676,7 +796,7 @@ function goToFrame(i) {
   const url = frameUrl(i);
   imgOverlay.setUrl(url);
   buildShoreLayer(i);
-  updateCards(i);
+  updateSiteDetail(i);
 
   // Update time labels
   const label = fmtTime(timesData.times[i]);
@@ -741,6 +861,7 @@ async function boot() {
   buildCards();
   buildSiteMarkers();
   initChart();
+  setCurrentSite(0);
   wireScrubbers(n - 1);
   goToFrame(0);
 

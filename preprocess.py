@@ -125,8 +125,22 @@ for i in range(len(raw_time)):
 print("Map frames done.")
 
 # ── times.json ───────────────────────────────────────────────────────────────
+# Four corners of the curvilinear model grid (angled box), in (lat, lon) order
+# suitable for Leaflet polygons.
+domain_corners = [
+    [float(map_lat[ 0,  0]), float(map_lon[ 0,  0])],
+    [float(map_lat[ 0, -1]), float(map_lon[ 0, -1])],
+    [float(map_lat[-1, -1]), float(map_lon[-1, -1])],
+    [float(map_lat[-1,  0]), float(map_lon[-1,  0])],
+]
+
 with open(os.path.join(OUT_DIR, 'times.json'), 'w') as fh:
-    json.dump({'times': timestamps, 'bounds': bounds, 'thresholds': thresh.tolist()}, fh)
+    json.dump({
+        'times': timestamps,
+        'bounds': bounds,
+        'domain': domain_corners,
+        'thresholds': thresh.tolist(),
+    }, fh)
 
 # ── sites.json ───────────────────────────────────────────────────────────────
 sites_payload = {
